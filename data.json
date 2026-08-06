@@ -3,7 +3,7 @@
     "name": "Sweden Open",
     "date": "2026-08-06",
     "theme": "light",
-    "lastUpdated": "2026-08-06T15:39:52.577Z"
+    "lastUpdated": "2026-08-06T15:52:09.557Z"
   },
   "players": [
     {
@@ -60,21 +60,6 @@
         "81sd6vbizb5": 2
       },
       "completed": true
-    },
-    {
-      "id": "5o3w3emmbgh",
-      "courseId": "ikcj1balbv0",
-      "scores": {
-        "ipg3ovngy85": null,
-        "lmc85zkh8nd": null,
-        "15whn6uhfgi": null,
-        "ugqn7pwhmal": null,
-        "z56hybyi1vw": null,
-        "yb1fwuzi6w0": null,
-        "63po4efimor": null,
-        "81sd6vbizb5": null
-      },
-      "completed": false
     }
   ]
 }
