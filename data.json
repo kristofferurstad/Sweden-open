@@ -3,40 +3,48 @@
     "name": "Sweden Open",
     "date": "2026-08-07",
     "theme": "light",
-    "lastUpdated": "2026-08-07T10:45:36.690Z"
+    "lastUpdated": "2026-08-07T11:09:41.230Z"
   },
   "players": [
     {
       "id": "ipg3ovngy85",
-      "name": "Benjamin Johannes Boe"
+      "name": "Benjamin Johannes Boe",
+      "handicap": 0
     },
     {
       "id": "lmc85zkh8nd",
-      "name": "Daniel yung shobo Refstie"
+      "name": "Daniel yung shobo Refstie",
+      "handicap": 25
     },
     {
       "id": "15whn6uhfgi",
-      "name": "Åge Konnestad"
+      "name": "Åge Konnestad",
+      "handicap": 25
     },
     {
       "id": "ugqn7pwhmal",
-      "name": "Sivert Flåt"
+      "name": "Sivert Flåt",
+      "handicap": 25
     },
     {
       "id": "z56hybyi1vw",
-      "name": "Kristoffer Urstad"
+      "name": "Kristoffer Urstad",
+      "handicap": 3
     },
     {
       "id": "yb1fwuzi6w0",
-      "name": "John Stålerød"
+      "name": "John Stålerød",
+      "handicap": 20
     },
     {
       "id": "63po4efimor",
-      "name": "Erik Gamst"
+      "name": "Erik Gamst",
+      "handicap": 1
     },
     {
       "id": "81sd6vbizb5",
-      "name": "Jørgen Home Misund"
+      "name": "Jørgen Home Misund",
+      "handicap": 13
     }
   ],
   "courses": [
@@ -63,19 +71,94 @@
   ],
   "rounds": [
     {
-      "id": "25hwaxziweq",
+      "id": "chf7bx2c1ed",
       "courseId": "ikcj1balbv0",
       "scores": {
-        "ipg3ovngy85": -2,
-        "lmc85zkh8nd": 5,
-        "15whn6uhfgi": 7,
-        "ugqn7pwhmal": 24,
-        "z56hybyi1vw": 6,
-        "yb1fwuzi6w0": 4,
-        "63po4efimor": 5,
-        "81sd6vbizb5": 15
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
       },
-      "completed": true
+      "completed": false
+    },
+    {
+      "id": "ctscnvgc3ds",
+      "courseId": "nr3powgfsjv",
+      "scores": {
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
+      },
+      "completed": false
+    },
+    {
+      "id": "43zrjr8cayd",
+      "courseId": "juf3xvdh65y",
+      "scores": {
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
+      },
+      "completed": false
+    },
+    {
+      "id": "bwtliciceqp",
+      "courseId": "g04w7qvgvkp",
+      "scores": {
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
+      },
+      "completed": false
+    },
+    {
+      "id": "zjs1733cpxi",
+      "courseId": "g04w7qvgvkp",
+      "scores": {
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
+      },
+      "completed": false
+    },
+    {
+      "id": "kez1cboemzp",
+      "courseId": "08wst10hkcm",
+      "scores": {
+        "ipg3ovngy85": null,
+        "lmc85zkh8nd": null,
+        "15whn6uhfgi": null,
+        "ugqn7pwhmal": null,
+        "z56hybyi1vw": null,
+        "yb1fwuzi6w0": null,
+        "63po4efimor": null,
+        "81sd6vbizb5": null
+      },
+      "completed": false
     }
   ]
 }
