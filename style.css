@@ -2,17 +2,26 @@
    TOKENS
    Disc-golf fairway palette: deep forest green + chalk-line
    white + steel-chain neutral + driver-disc orange accent.
+
+   FARGEVALG: --fairway (primærfarge) og --disc-orange (aksentfarge)
+   er de to "master"-fargene admin kan endre i Admin → Utseende.
+   De andre grønn-/oransjetonene er utledet av disse to via color-mix(),
+   slik at hele fargepaletten oppdateres automatisk når admin bytter
+   farge — appen setter --fairway/--disc-orange som inline stil på
+   <html>, som her overstyrer standardverdiene under.
    ============================================================ */
 :root{
-  --fairway-dark:   #14301F;
   --fairway:        #2D6A4F;
-  --fairway-soft:   #E7F0E9;
+  --disc-orange:    #E8590C;
+
+  --fairway-dark:   color-mix(in srgb, var(--fairway) 43%, black);
+  --fairway-soft:   color-mix(in srgb, var(--fairway) 12%, white);
+  --disc-orange-soft: color-mix(in srgb, var(--disc-orange) 18%, white);
+
   --chalk:          #FAF8F3;
   --surface:        #FFFFFF;
   --steel:          #6B7A8F;
   --steel-soft:     #DCE2E8;
-  --disc-orange:    #E8590C;
-  --disc-orange-soft:#FBE3D3;
   --gold:           #C9971F;
   --silver:         #8C96A1;
   --bronze:         #B0672E;
@@ -47,9 +56,9 @@
   --text: #EEF3EE;
   --text-soft: #A9BBAE;
   --border: #294633;
-  --fairway-soft: #1D3A27;
-  --disc-orange-soft: #3A2418;
-  --header-bg: #0A150E;
+  --fairway-soft: color-mix(in srgb, var(--fairway) 45%, black);
+  --disc-orange-soft: color-mix(in srgb, var(--disc-orange) 38%, black);
+  --header-bg: color-mix(in srgb, var(--fairway) 20%, black);
   --header-text: #EEF3EE;
   --shadow-sm: 0 1px 3px rgba(0,0,0,.35);
   --shadow-md: 0 6px 24px rgba(0,0,0,.45);
@@ -162,6 +171,30 @@ main{ padding:20px; }
 /* ============================================================
    OVERVIEW CARDS
    ============================================================ */
+
+/* Stort lederbilde øverst på Oversikt — "storskjerm"-visning av lederen */
+.leader-spotlight{
+  display:flex; align-items:center; gap:20px;
+  background:linear-gradient(135deg, var(--fairway-dark), var(--fairway));
+  color:#fff; border-radius:var(--radius-lg); padding:22px 26px; margin-bottom:18px;
+  box-shadow:var(--shadow-md);
+}
+.leader-spotlight[hidden]{ display:none; }
+.leader-spotlight-avatar .avatar-img{
+  border:3px solid rgba(255,255,255,.55); box-shadow:0 4px 14px rgba(0,0,0,.25);
+}
+.leader-spotlight-avatar .avatar-placeholder{
+  background:rgba(255,255,255,.16); color:#fff; border-color:rgba(255,255,255,.4);
+}
+.leader-spotlight-tag{
+  font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; font-weight:700; opacity:.85;
+}
+.leader-spotlight-name{ font-family:var(--font-display); font-size:clamp(1.8rem,5vw,2.6rem); line-height:1.05; }
+.leader-spotlight-score{ font-family:var(--font-mono); opacity:.9; margin-top:2px; font-size:.95rem; }
+@media (max-width:480px){
+  .leader-spotlight{ flex-direction:column; text-align:center; padding:20px; }
+}
+
 .card-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
 .stat-card{
   background:var(--panel-bg); border:1px solid var(--border); border-radius:var(--radius-md);
@@ -207,6 +240,35 @@ table.board tr.is-leader td{ font-weight:700; }
 .rank-badge.g{ background:linear-gradient(135deg,#F3D27A,var(--gold)); color:#4A3600; }
 .rank-badge.s{ background:linear-gradient(135deg,#E4E9EE,var(--silver)); color:#33393F; }
 .rank-badge.b{ background:linear-gradient(135deg,#E3AE84,var(--bronze)); color:#4A2A0F; }
+
+/* ============================================================
+   BILDE: spilleravatarer (leaderboard, kortoppsett, admin)
+   ============================================================ */
+.player-cell{ display:inline-flex; align-items:center; gap:8px; }
+.avatar-img{
+  border-radius:50%; object-fit:cover; flex-shrink:0; display:inline-flex;
+  align-items:center; justify-content:center; vertical-align:middle;
+}
+.avatar-placeholder{
+  background:var(--fairway-soft); color:var(--fairway); font-weight:700; font-family:var(--font-display);
+  border:1px solid var(--border);
+}
+[data-theme="dark"] .avatar-placeholder{ background:var(--fairway); color:#fff; }
+
+.group-card li{ align-items:center; }
+
+.avatar-wrap{ position:relative; display:inline-flex; align-items:center; flex-shrink:0; }
+.avatar-thumb{
+  width:44px; height:44px; border-radius:50%; object-fit:cover; border:1px solid var(--border);
+  background:var(--fairway-soft); color:var(--fairway); display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; font-size:1rem;
+}
+[data-theme="dark"] .avatar-thumb.avatar-placeholder{ background:var(--fairway); color:#fff; }
+.avatar-upload-btn{
+  position:absolute; bottom:-2px; right:-2px; width:19px; height:19px; border-radius:50%;
+  background:var(--panel-bg); border:1px solid var(--border); font-size:.65rem; line-height:1;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
 
 .trend{ font-weight:700; font-family:var(--font-mono); font-size:.85rem; }
 .trend.up{ color:var(--up); }
@@ -276,6 +338,16 @@ input[type="number"]{ font-family:var(--font-mono); width:84px; text-align:right
 .inline-form input, .inline-form select{ flex:1; min-width:160px; }
 /* HANDICAP: input for nytt handicap skal ikke ta like mye plass som navnefeltet */
 #inputPlayerHandicap{ flex:0 0 110px; min-width:0; text-align:right; font-family:var(--font-mono); }
+/* BILDE: filvelger for nytt spillerbilde skal ikke ta like mye plass som navnefeltet */
+#inputPlayerPhoto{ flex:1 1 190px; min-width:160px; font-size:.82rem; padding:6px 8px; }
+
+/* FARGEVALG: fargevelgere i Admin → Utseende */
+.color-row{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.color-row label{ font-size:.9rem; font-weight:600; color:var(--text); flex:1; min-width:0; }
+input[type="color"]{
+  width:52px; height:38px; padding:2px; border:1px solid var(--border); border-radius:8px;
+  background:var(--panel-bg); cursor:pointer; flex-shrink:0;
+}
 
 .btn{
   font-weight:700; font-size:.9rem; border-radius:999px; padding:9px 18px;
@@ -290,12 +362,12 @@ input[type="number"]{ font-family:var(--font-mono); width:84px; text-align:right
 .btn-sm{ padding:5px 12px; font-size:.78rem; }
 .file-btn{ display:inline-flex; align-items:center; }
 
-.admin-list{ display:flex; flex-direction:column; gap:8px; max-width:480px; }
+.admin-list{ display:flex; flex-direction:column; gap:8px; max-width:560px; }
 .admin-list li{
   display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px;
 }
-.admin-list .name-edit{ border:none; background:transparent; font-size:.95rem; color:var(--text); flex:1; padding:2px; }
+.admin-list .name-edit{ border:none; background:transparent; font-size:.95rem; color:var(--text); flex:1; min-width:0; padding:2px; }
 /* HANDICAP: eget lite redigeringsfelt i spillerlisten */
 .admin-list .hcp-edit{
   width:74px; flex:none; text-align:right; font-family:var(--font-mono); font-size:.88rem;

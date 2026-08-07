@@ -16,7 +16,7 @@ function uid(){
 
 function defaultState(){
   return {
-    meta: { name: 'Frisbeegolfturnering', date: '', theme: 'light', info: '', lastUpdated: null },
+    meta: { name: 'Frisbeegolfturnering', date: '', theme: 'light', info: '', primaryColor: '#2D6A4F', accentColor: '#E8590C', lastUpdated: null },
     players: [],
     courses: [],
     rounds: [] // { id, courseId, scores: { playerId: number|null }, completed: bool }
@@ -59,11 +59,21 @@ async function loadState(){
   normalizePlayers(); // HANDICAP: gamle turneringer uten handicap-felt får 0 automatisk
 
   document.documentElement.setAttribute('data-theme', state.meta.theme === 'dark' ? 'dark' : 'light');
+  applyThemeColors(); // FARGEVALG: sett lagrede primær-/aksentfarger med én gang
 }
 
 function saveState(){
   state.meta.lastUpdated = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// FARGEVALG: setter primær-/aksentfarge som CSS-variabler på <html>. Alle
+// avledede toner (fairway-dark, fairway-soft, disc-orange-soft, header-bg)
+// er definert med color-mix() i style.css og oppdateres automatisk av dette.
+function applyThemeColors(){
+  const root = document.documentElement;
+  if(state.meta.primaryColor) root.style.setProperty('--fairway', state.meta.primaryColor);
+  if(state.meta.accentColor) root.style.setProperty('--disc-orange', state.meta.accentColor);
 }
 
 /* ================================================================
@@ -84,6 +94,52 @@ function hasScore(v){
   return v !== null && v !== undefined && v !== '';
 }
 
+/* ---- BILDE: spillerbilder ----
+   Bilder lagres som komprimerte data-URL-er direkte på spilleren (samme
+   sted som navn/handicap), slik at de følger med i Local Storage og i
+   JSON-eksport/import uten noen egen fil eller server. Bildet skaleres
+   ned til maks 200×200 og beskjæres til kvadrat før lagring, for å holde
+   størrelsen lav nok for Local Storage. */
+function resizeImageToDataUrl(file, maxSize, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Kunne ikke lese filen'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Kunne ikke lese bildet'));
+      img.onload = () => {
+        const srcSize = Math.min(img.width, img.height);
+        const sx = (img.width - srcSize) / 2;
+        const sy = (img.height - srcSize) / 2;
+        const outSize = Math.min(maxSize, srcSize);
+        const canvas = document.createElement('canvas');
+        canvas.width = outSize; canvas.height = outSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, outSize, outSize);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Initialer som fallback-avatar når spilleren ikke har lastet opp bilde
+function initials(name){
+  return (name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
+}
+
+// Liten rund avatar (bilde eller initialer) — brukes på leaderboard og i kortoppsettet
+function avatarHtml(playerId, size){
+  const p = state.players.find(p => p.id === playerId);
+  const s = size || 26;
+  if(p && p.photo){
+    return `<img class="avatar-img" style="width:${s}px;height:${s}px;" src="${p.photo}" alt="">`;
+  }
+  const label = p ? initials(p.name) : '';
+  return `<span class="avatar-img avatar-placeholder" style="width:${s}px;height:${s}px;font-size:${Math.round(s*0.42)}px;">${escapeHtml(label)}</span>`;
+}
+
 /* ---- HANDICAP: hjelpefunksjoner ----
    Handicap er kun informativt. Det påvirker ALDRI standingsForRounds,
    rundevinner, sammenlagt eller kortoppsett — kun en egen visningskolonne
@@ -95,6 +151,7 @@ function normalizePlayers(){
   state.players.forEach(p => {
     const h = Number(p.handicap);
     p.handicap = Number.isFinite(h) ? h : 0;
+    if(typeof p.photo !== 'string') p.photo = null; // BILDE: gamle spillere uten bilde får null
   });
 }
 
@@ -165,9 +222,10 @@ function roundWinners(round){
 
 // Kortoppsett er uendret av handicap — baseres kun på faktisk turneringsscore
 // (rekkefølgen kommer fra currentStandings(), som fortsatt rangerer på brutto).
+// BILDE: playerId følger med slik at avatar kan vises ved siden av navnet.
 function nextRoundGroups(){
   const standing = currentStandings();
-  const order = [...standing.ranked, ...standing.unranked].map(r => r.name);
+  const order = [...standing.ranked, ...standing.unranked].map(r => ({ name: r.name, playerId: r.playerId }));
   const groups = [];
   for(let i = 0; i < order.length; i += 4){
     groups.push(order.slice(i, i + 4));
@@ -208,6 +266,23 @@ function renderHeader(){
 function renderOverview(){
   const standing = currentStandings();
   const leader = standing.ranked[0];
+
+  // BILDE: stort "storskjerm"-bilde av lederen øverst på Oversikt
+  const spotlightEl = document.getElementById('leaderSpotlight');
+  if(leader){
+    spotlightEl.innerHTML = `
+      <div class="leader-spotlight-avatar">${avatarHtml(leader.playerId, 96)}</div>
+      <div>
+        <div class="leader-spotlight-tag">🏆 Leder</div>
+        <div class="leader-spotlight-name">${escapeHtml(leader.name)}</div>
+        <div class="leader-spotlight-score">${leader.total} totalt</div>
+      </div>`;
+    spotlightEl.hidden = false;
+  }else{
+    spotlightEl.innerHTML = '';
+    spotlightEl.hidden = true;
+  }
+
   const cards = [
     { label: 'Spillere', value: state.players.length },
     { label: 'Runder', value: state.rounds.length },
@@ -301,7 +376,7 @@ function renderLeaderboard(){
     return `
       <tr class="${isLeader ? 'is-leader' : ''}">
         <td>${rankDisplay}</td>
-        <td>${escapeHtml(row.name)}</td>
+        <td><span class="player-cell">${avatarHtml(row.playerId, 26)}${escapeHtml(row.name)}</span></td>
         ${roundCells}
         <td class="num">${row.playedCount > 0 ? row.total : '–'}</td>
         <td class="num">${formatHandicap(hcp)}</td>
@@ -366,11 +441,11 @@ function renderNextRound(){
     : 'Ingen runder er spilt ennå — gruppene følger rekkefølgen spillerne ble lagt til i.';
 
   const groups = nextRoundGroups();
-  groupsEl.innerHTML = groups.map((names, i) => `
+  groupsEl.innerHTML = groups.map((players, i) => `
     <div class="group-card">
       <h3>${groupLabel(i)}</h3>
       <ol>
-        ${names.map((n, idx) => `<li><span class="pos">${i*4 + idx + 1}.</span>${escapeHtml(n)}</li>`).join('')}
+        ${players.map((pl, idx) => `<li><span class="pos">${i*4 + idx + 1}.</span>${avatarHtml(pl.playerId, 22)}${escapeHtml(pl.name)}</li>`).join('')}
       </ol>
     </div>
   `).join('');
@@ -394,6 +469,8 @@ function renderAdminInfo(){
   document.getElementById('inputTournamentName').value = state.meta.name || '';
   document.getElementById('inputTournamentDate').value = state.meta.date || '';
   document.getElementById('inputTournamentInfo').value = state.meta.info || '';
+  document.getElementById('inputPrimaryColor').value = state.meta.primaryColor || '#2D6A4F';
+  document.getElementById('inputAccentColor').value = state.meta.accentColor || '#E8590C';
 }
 
 function renderPlayers(){
@@ -402,10 +479,20 @@ function renderPlayers(){
   empty.hidden = state.players.length > 0;
   list.innerHTML = state.players.map(p => `
     <li data-id="${p.id}">
+      <span class="avatar-wrap">
+        ${p.photo
+          ? `<img class="avatar-thumb" src="${p.photo}" alt="${escapeHtml(p.name)}">`
+          : `<span class="avatar-thumb avatar-placeholder">${escapeHtml(initials(p.name))}</span>`}
+        <label class="avatar-upload-btn" title="Last opp bilde">
+          📷
+          <input type="file" accept="image/*" data-role="player-photo" hidden>
+        </label>
+      </span>
       <input class="name-edit" data-role="player-name" value="${escapeHtml(p.name)}">
       <input class="hcp-edit" type="number" step="any" data-role="player-handicap"
              value="${p.handicap}" title="Handicap" aria-label="Handicap for ${escapeHtml(p.name)}">
       <span class="row-actions">
+        ${p.photo ? `<button class="icon-action" data-action="remove-photo" title="Fjern bilde">🖼✕</button>` : ''}
         <button class="icon-action" data-action="delete-player" title="Slett spiller">✕</button>
       </span>
     </li>
@@ -468,11 +555,11 @@ function renderAdminRounds(){
 /* ================================================================
    ADMIN-HANDLINGER
    ================================================================ */
-function addPlayer(name, handicap){
+function addPlayer(name, handicap, photo){
   const trimmed = name.trim();
   if(!trimmed) return;
   const h = Number(handicap);
-  state.players.push({ id: uid(), name: trimmed, handicap: Number.isFinite(h) ? h : 0 });
+  state.players.push({ id: uid(), name: trimmed, handicap: Number.isFinite(h) ? h : 0, photo: photo || null });
   saveState(); renderAll();
 }
 function renamePlayer(id, name){
@@ -486,6 +573,19 @@ function setPlayerHandicap(id, value){
   const h = Number(value);
   p.handicap = Number.isFinite(h) ? h : 0;
   saveState(); renderHeader(); renderOverview(); renderLeaderboard(); renderRoundsPublic(); renderNextRound(); renderAdminRounds();
+}
+// BILDE: settes/erstattes eller fjernes når som helst fra spillerlisten i Admin
+function setPlayerPhoto(id, dataUrl){
+  const p = state.players.find(p => p.id === id);
+  if(!p) return;
+  p.photo = dataUrl;
+  saveState(); renderAll();
+}
+function removePlayerPhoto(id){
+  const p = state.players.find(p => p.id === id);
+  if(!p) return;
+  p.photo = null;
+  saveState(); renderAll();
 }
 function deletePlayer(id){
   if(!confirm('Slette denne spilleren? Registrerte score for spilleren fjernes også.')) return;
@@ -669,25 +769,56 @@ function initEvents(){
   document.getElementById('inputTournamentInfo').addEventListener('input', e => {
     state.meta.info = e.target.value; saveState(); renderInfoTab();
   });
+  document.getElementById('inputPrimaryColor').addEventListener('input', e => {
+    state.meta.primaryColor = e.target.value; saveState(); applyThemeColors();
+  });
+  document.getElementById('inputAccentColor').addEventListener('input', e => {
+    state.meta.accentColor = e.target.value; saveState(); applyThemeColors();
+  });
+  document.getElementById('resetColorsBtn').addEventListener('click', () => {
+    state.meta.primaryColor = defaultState().meta.primaryColor;
+    state.meta.accentColor = defaultState().meta.accentColor;
+    saveState(); applyThemeColors(); renderAdminInfo();
+    toast('Standardfarger gjenopprettet');
+  });
 
-  document.getElementById('playerForm').addEventListener('submit', e => {
+  document.getElementById('playerForm').addEventListener('submit', async e => {
     e.preventDefault();
     const nameInput = document.getElementById('inputPlayerName');
     const hcpInput = document.getElementById('inputPlayerHandicap');
-    addPlayer(nameInput.value, hcpInput.value);
+    const photoInput = document.getElementById('inputPlayerPhoto');
+    let photo = null;
+    if(photoInput.files[0]){
+      try{ photo = await resizeImageToDataUrl(photoInput.files[0], 200, 0.82); }
+      catch(err){ alert('Klarte ikke å lese bildet. Spilleren legges til uten bilde.'); }
+    }
+    addPlayer(nameInput.value, hcpInput.value, photo);
     nameInput.value = '';
     hcpInput.value = '0';
+    photoInput.value = '';
   });
-  document.getElementById('playerList').addEventListener('change', e => {
+  document.getElementById('playerList').addEventListener('change', async e => {
     if(e.target.dataset.role === 'player-name'){
       renamePlayer(e.target.closest('li').dataset.id, e.target.value);
     }else if(e.target.dataset.role === 'player-handicap'){
       setPlayerHandicap(e.target.closest('li').dataset.id, e.target.value);
+    }else if(e.target.dataset.role === 'player-photo'){
+      const file = e.target.files[0];
+      if(!file) return;
+      const id = e.target.closest('li').dataset.id;
+      try{
+        const dataUrl = await resizeImageToDataUrl(file, 200, 0.82);
+        setPlayerPhoto(id, dataUrl);
+      }catch(err){
+        alert('Klarte ikke å lese bildet. Prøv et annet bildeformat (f.eks. JPG eller PNG).');
+      }
     }
   });
   document.getElementById('playerList').addEventListener('click', e => {
     if(e.target.dataset.action === 'delete-player'){
       deletePlayer(e.target.closest('li').dataset.id);
+    }else if(e.target.dataset.action === 'remove-photo'){
+      removePlayerPhoto(e.target.closest('li').dataset.id);
     }
   });
 

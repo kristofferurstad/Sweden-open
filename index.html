@@ -50,6 +50,8 @@
 
     <!-- ===== OVERSIKT ===== -->
     <section id="tab-oversikt" class="tab-panel active">
+      <div id="leaderSpotlight" class="leader-spotlight" hidden></div>
+
       <div class="card-grid" id="overviewCards"></div>
 
       <div class="panel">
@@ -120,6 +122,7 @@
         <nav class="subtabbar" role="tablist" aria-label="Admin-seksjoner">
           <button class="subtab active" data-subtab="info" role="tab" aria-selected="true">Turnering</button>
           <button class="subtab" data-subtab="melding" role="tab" aria-selected="false">Informasjon</button>
+          <button class="subtab" data-subtab="utseende" role="tab" aria-selected="false">Utseende</button>
           <button class="subtab" data-subtab="spillere" role="tab" aria-selected="false">Spillere</button>
           <button class="subtab" data-subtab="baner" role="tab" aria-selected="false">Baner</button>
           <button class="subtab" data-subtab="runder" role="tab" aria-selected="false">Runder &amp; score</button>
@@ -147,11 +150,26 @@
           <p class="section-note">Denne teksten vises til alle i fanen «Informasjon».</p>
         </div>
 
+        <!-- Utseende / farger -->
+        <div id="sub-utseende" class="subtab-panel">
+          <div class="color-row">
+            <label for="inputPrimaryColor">Primærfarge (header, knapper, ledertavle)</label>
+            <input type="color" id="inputPrimaryColor" value="#2D6A4F">
+          </div>
+          <div class="color-row">
+            <label for="inputAccentColor">Aksentfarge (uthevinger, medaljer, beste runde)</label>
+            <input type="color" id="inputAccentColor" value="#E8590C">
+          </div>
+          <button id="resetColorsBtn" class="btn btn-secondary" type="button">Tilbakestill til standardfarger</button>
+          <p class="section-note">Fargene gjelder for alle som åpner lenken, og lagres sammen med resten av turneringsdataen.</p>
+        </div>
+
         <!-- Spillere -->
         <div id="sub-spillere" class="subtab-panel">
           <form id="playerForm" class="inline-form">
             <input type="text" id="inputPlayerName" placeholder="Navn på spiller" required>
             <input type="number" id="inputPlayerHandicap" step="any" value="0" placeholder="Handicap" title="Handicap (kan være negativt og ha desimaler)">
+            <input type="file" id="inputPlayerPhoto" accept="image/*" title="Bilde (valgfritt)">
             <button type="submit" class="btn btn-primary">Legg til</button>
           </form>
           <p class="section-note">Handicap kan være positivt eller negativt, og kan ha desimaler (f.eks. 2.5 eller -1.0). Score med handicap = bruttoscore + handicap.</p>
