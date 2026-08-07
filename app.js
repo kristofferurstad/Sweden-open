@@ -269,23 +269,23 @@ function addBet(bettor, targetPlayerId, amount, scope){
     amount: Number.isFinite(amt) ? amt : 0,
     scope: scope || 'total'
   });
-  saveState(); renderAdminBets();
+  saveState(); renderBettingAll();
 }
 function deleteBet(id){
   if(!confirm('Slette denne bettingen?')) return;
   state.bets = state.bets.filter(b => b.id !== id);
-  saveState(); renderAdminBets();
+  saveState(); renderBettingAll();
 }
 function setBetBettor(id, value){
   const b = state.bets.find(b => b.id === id);
-  if(b && value.trim()){ b.bettor = value.trim(); saveState(); }
+  if(b && value.trim()){ b.bettor = value.trim(); saveState(); renderBettingAll(); }
 }
 function setBetAmount(id, value){
   const b = state.bets.find(b => b.id === id);
   if(!b) return;
   const amt = Number(value);
   b.amount = Number.isFinite(amt) ? amt : 0;
-  saveState(); renderAdminBets();
+  saveState(); renderBettingAll();
 }
 
 // ODDS: settes per spiller (ikke per bet) — brukes til å vise mulig utbetaling.
@@ -297,7 +297,16 @@ function setPlayerOdds(playerId, value){
   }else{
     state.odds[playerId] = v;
   }
-  saveState(); renderAdminBets();
+  saveState(); renderBettingAll();
+}
+
+// Oppdaterer ALL betting-/odds-relatert rendering samlet — både admin-
+// visningen og de offentlige panelene på Oversikt (odds + betting-listen),
+// slik at fremsiden alltid holdes i sync med det admin legger inn.
+function renderBettingAll(){
+  renderAdminBets();
+  renderOverviewOdds();
+  renderOverviewBets();
 }
 
 // Kortoppsett er uendret av handicap — baseres kun på faktisk turneringsscore
