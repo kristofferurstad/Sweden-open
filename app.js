@@ -16,10 +16,17 @@ function uid(){
 
 function defaultState(){
   return {
-    meta: { name: 'Frisbeegolfturnering', date: '', theme: 'light', info: '', primaryColor: '#2D6A4F', accentColor: '#E8590C', lastUpdated: null },
+    meta: {
+      name: 'Frisbeegolfturnering', date: '', theme: 'light', info: '',
+      primaryColor: '#2D6A4F', accentColor: '#E8590C',
+      popupText: '', popupEnabled: false, // POPUP: infoboks som må godkjennes ved besøk
+      lastUpdated: null
+    },
     players: [],
     courses: [],
-    rounds: [] // { id, courseId, scores: { playerId: number|null }, completed: bool }
+    rounds: [], // { id, courseId, scores: { playerId: number|null }, completed: bool }
+    bets: [],   // BETTING: { id, bettor, targetPlayerId, amount, scope: 'total'|roundId, note }
+    odds: {}    // ODDS: { playerId: number } — desimalodds satt av admin, valgfritt per spiller
   };
 }
 
@@ -56,6 +63,8 @@ async function loadState(){
   state.players = state.players || [];
   state.courses = state.courses || [];
   state.rounds = state.rounds || [];
+  state.bets = state.bets || []; // BETTING: bakoverkompatibilitet for gamle eksportfiler
+  state.odds = state.odds || {}; // ODDS: bakoverkompatibilitet for gamle eksportfiler
   normalizePlayers(); // HANDICAP: gamle turneringer uten handicap-felt får 0 automatisk
 
   document.documentElement.setAttribute('data-theme', state.meta.theme === 'dark' ? 'dark' : 'light');
@@ -220,6 +229,77 @@ function roundWinners(round){
   return { min, names: entries.filter(e => Number(e.score) === min).map(e => e.name) };
 }
 
+/* ================================================================
+   BETTING (Admin-only — krever kodelås)
+   En bet gjelder enten "totalt" (sammenlagtvinneren) eller en bestemt
+   runde (og dermed banen den runden spilles på). Rent oppslag/status —
+   påvirker aldri selve turneringsberegningen.
+   ================================================================ */
+function betScopeLabel(scope){
+  if(scope === 'total') return 'Totalt (sammenlagt)';
+  const idx = state.rounds.findIndex(r => r.id === scope);
+  if(idx === -1) return 'Runden er slettet';
+  return `Runde ${idx + 1} – ${courseName(state.rounds[idx].courseId)}`;
+}
+
+// Live status for en bet: har den (foreløpig) "truffet"?
+function betStatus(bet){
+  const player = state.players.find(p => p.id === bet.targetPlayerId);
+  if(!player) return { label: 'Spiller slettet', cls: '' };
+
+  if(bet.scope === 'total'){
+    const row = currentStandings().all.find(r => r.playerId === bet.targetPlayerId);
+    if(!row || row.rank === null) return { label: 'Ingen resultater ennå', cls: 'pending' };
+    return row.rank === 1 ? { label: '🏆 Leder nå', cls: 'winning' } : { label: `Plass ${row.rank}`, cls: '' };
+  }
+
+  const round = state.rounds.find(r => r.id === bet.scope);
+  if(!round) return { label: 'Runden er slettet', cls: '' };
+  const winners = roundWinners(round);
+  if(winners.names.length === 0) return { label: 'Ikke spilt ennå', cls: 'pending' };
+  return winners.names.includes(player.name) ? { label: '🏆 Vant runden', cls: 'winning' } : { label: 'Tapte runden', cls: 'losing' };
+}
+
+function addBet(bettor, targetPlayerId, amount, scope){
+  const b = bettor.trim();
+  if(!b || !targetPlayerId) return;
+  const amt = Number(amount);
+  state.bets.push({
+    id: uid(), bettor: b, targetPlayerId,
+    amount: Number.isFinite(amt) ? amt : 0,
+    scope: scope || 'total'
+  });
+  saveState(); renderAdminBets();
+}
+function deleteBet(id){
+  if(!confirm('Slette denne bettingen?')) return;
+  state.bets = state.bets.filter(b => b.id !== id);
+  saveState(); renderAdminBets();
+}
+function setBetBettor(id, value){
+  const b = state.bets.find(b => b.id === id);
+  if(b && value.trim()){ b.bettor = value.trim(); saveState(); }
+}
+function setBetAmount(id, value){
+  const b = state.bets.find(b => b.id === id);
+  if(!b) return;
+  const amt = Number(value);
+  b.amount = Number.isFinite(amt) ? amt : 0;
+  saveState(); renderAdminBets();
+}
+
+// ODDS: settes per spiller (ikke per bet) — brukes til å vise mulig utbetaling.
+// Tomt/ugyldig felt fjerner odds for spilleren igjen.
+function setPlayerOdds(playerId, value){
+  const v = Number(value);
+  if(value === '' || !Number.isFinite(v) || v <= 0){
+    delete state.odds[playerId];
+  }else{
+    state.odds[playerId] = v;
+  }
+  saveState(); renderAdminBets();
+}
+
 // Kortoppsett er uendret av handicap — baseres kun på faktisk turneringsscore
 // (rekkefølgen kommer fra currentStandings(), som fortsatt rangerer på brutto).
 // BILDE: playerId følger med slik at avatar kan vises ved siden av navnet.
@@ -252,6 +332,7 @@ function renderAll(){
   renderPlayers();
   renderCourses();
   renderAdminRounds();
+  renderAdminBets();
 }
 
 function renderHeader(){
@@ -271,7 +352,7 @@ function renderOverview(){
   const spotlightEl = document.getElementById('leaderSpotlight');
   if(leader){
     spotlightEl.innerHTML = `
-      <div class="leader-spotlight-avatar">${avatarHtml(leader.playerId, 96)}</div>
+      <div class="leader-spotlight-avatar">${avatarHtml(leader.playerId, 160)}</div>
       <div>
         <div class="leader-spotlight-tag">🏆 Leder</div>
         <div class="leader-spotlight-name">${escapeHtml(leader.name)}</div>
@@ -471,6 +552,8 @@ function renderAdminInfo(){
   document.getElementById('inputTournamentInfo').value = state.meta.info || '';
   document.getElementById('inputPrimaryColor').value = state.meta.primaryColor || '#2D6A4F';
   document.getElementById('inputAccentColor').value = state.meta.accentColor || '#E8590C';
+  document.getElementById('inputPopupText').value = state.meta.popupText || '';
+  document.getElementById('inputPopupEnabled').checked = !!state.meta.popupEnabled;
 }
 
 function renderPlayers(){
@@ -550,6 +633,96 @@ function renderAdminRounds(){
         </label>
       </div>`;
   }).join('');
+}
+
+function renderAdminBets(){
+  renderOddsList(); // ODDS: liste med redigerbare odds per spiller
+
+  // Fyll select-bokser for målspiller og omfang (totalt / enkelt runde)
+  const targetSel = document.getElementById('inputBetTarget');
+  targetSel.innerHTML = state.players.map(p => {
+    const odds = state.odds[p.id];
+    return `<option value="${p.id}">${escapeHtml(p.name)}${odds ? ` (odds ${odds})` : ''}</option>`;
+  }).join('');
+
+  const scopeSel = document.getElementById('inputBetScope');
+  let scopeOptions = `<option value="total">Totalt (sammenlagt)</option>`;
+  state.rounds.forEach((r, i) => {
+    scopeOptions += `<option value="${r.id}">Runde ${i + 1} – ${escapeHtml(courseName(r.courseId))}</option>`;
+  });
+  scopeSel.innerHTML = scopeOptions;
+
+  const warnEl = document.getElementById('betPlayerWarning');
+  warnEl.hidden = state.players.length > 0;
+  document.getElementById('betForm').querySelector('button').disabled = state.players.length === 0;
+
+  // Bet-liste
+  const listEl = document.getElementById('betList');
+  const emptyEl = document.getElementById('betEmpty');
+  if(state.bets.length === 0){
+    listEl.innerHTML = '';
+    emptyEl.hidden = false;
+  }else{
+    emptyEl.hidden = true;
+    listEl.innerHTML = state.bets.map(b => {
+      const player = state.players.find(p => p.id === b.targetPlayerId);
+      const status = betStatus(b);
+      const odds = state.odds[b.targetPlayerId];
+      const payout = odds ? round2(b.amount * odds) : null;
+      return `
+        <li data-id="${b.id}">
+          <div class="bet-row-main">
+            <span class="bet-target">${avatarHtml(b.targetPlayerId, 24)}${escapeHtml(player ? player.name : 'Ukjent spiller')}</span>
+            <span class="bet-scope">${escapeHtml(betScopeLabel(b.scope))}</span>
+            <span class="bet-status ${status.cls}">${status.label}</span>
+          </div>
+          <div class="bet-row-sub">
+            <input class="bet-bettor-edit" data-role="bet-bettor" value="${escapeHtml(b.bettor)}" title="Hvem som har bettet">
+            <span class="bet-amount-wrap">
+              <input class="bet-amount-edit" type="number" step="any" data-role="bet-amount" value="${b.amount}" title="Beløp">
+              <span class="bet-amount-suffix">kr</span>
+            </span>
+            <button class="icon-action" data-action="delete-bet" title="Slett betting">✕</button>
+          </div>
+          ${odds ? `<div class="bet-row-odds">Odds <strong>${odds}</strong> → mulig utbetaling <strong>${payout} kr</strong></div>` : ''}
+        </li>`;
+    }).join('');
+  }
+
+  // Oppsummering: totalpott og penger per spiller
+  const summaryEl = document.getElementById('betSummary');
+  if(state.bets.length === 0){
+    summaryEl.innerHTML = '';
+  }else{
+    const totalPot = state.bets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const perPlayer = {};
+    state.bets.forEach(b => { perPlayer[b.targetPlayerId] = (perPlayer[b.targetPlayerId] || 0) + (Number(b.amount) || 0); });
+    const rows = Object.entries(perPlayer)
+      .sort((a, b) => b[1] - a[1])
+      .map(([pid, sum]) => {
+        const player = state.players.find(p => p.id === pid);
+        return `<div class="bet-summary-row"><span class="bet-summary-name">${avatarHtml(pid, 20)}${escapeHtml(player ? player.name : 'Ukjent spiller')}</span><span class="num">${sum} kr</span></div>`;
+      }).join('');
+    summaryEl.innerHTML = `
+      <div class="bet-summary-total">Totalt bettet: <strong>${totalPot} kr</strong></div>
+      <div class="bet-summary-breakdown">${rows}</div>`;
+  }
+}
+
+// ODDS: egen liste med redigerbart oddsfelt per spiller, øverst i Betting-fanen
+function renderOddsList(){
+  const el = document.getElementById('oddsList');
+  if(state.players.length === 0){
+    el.innerHTML = '<p class="empty-hint">Legg til spillere for å sette odds.</p>';
+    return;
+  }
+  el.innerHTML = state.players.map(p => `
+    <div class="odds-row" data-id="${p.id}">
+      <span class="odds-player">${avatarHtml(p.id, 22)}${escapeHtml(p.name)}</span>
+      <input type="number" step="any" min="0" class="odds-input" data-role="player-odds"
+             value="${state.odds[p.id] ?? ''}" placeholder="–" title="Odds for ${escapeHtml(p.name)}">
+    </div>
+  `).join('');
 }
 
 /* ================================================================
@@ -662,9 +835,12 @@ function importJSON(file){
       }
       state = parsed;
       state.meta = Object.assign(defaultState().meta, state.meta || {});
+      state.bets = state.bets || []; // BETTING: bakoverkompatibilitet for eldre eksportfiler
+      state.odds = state.odds || {}; // ODDS: bakoverkompatibilitet for eldre eksportfiler
       normalizePlayers(); // HANDICAP: eldre eksportfiler uten feltet får 0 automatisk
       saveState();
       document.documentElement.setAttribute('data-theme', state.meta.theme === 'dark' ? 'dark' : 'light');
+      applyThemeColors(); // FARGEVALG: bruk fargene fra den importerte filen
       renderAll();
       toast('Data importert');
     }catch(e){
@@ -757,6 +933,43 @@ function initAdminLock(){
 }
 
 /* ================================================================
+   POPUP-BOKS VED BESØK
+   Admin-styrt infoboks som dukker opp øverst på skjermen med det samme
+   siden lastes (hvis aktivert og det finnes tekst), og som må hukes av
+   før man kommer videre. Vises én gang per nettleserøkt.
+   ================================================================ */
+const POPUP_SESSION_KEY = 'discgolf_popup_seen';
+
+function maybeShowInfoModal(){
+  const modal = document.getElementById('infoModal');
+  const text = (state.meta.popupText || '').trim();
+  if(!state.meta.popupEnabled || !text){
+    modal.hidden = true;
+    return;
+  }
+  let alreadySeen = false;
+  try{ alreadySeen = sessionStorage.getItem(POPUP_SESSION_KEY) === '1'; }catch(e){ /* ignorer */ }
+  if(alreadySeen){
+    modal.hidden = true;
+    return;
+  }
+  document.getElementById('infoModalText').innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+  document.getElementById('infoModalCheckbox').checked = false;
+  document.getElementById('infoModalContinue').disabled = true;
+  modal.hidden = false;
+}
+
+function initInfoModal(){
+  const checkbox = document.getElementById('infoModalCheckbox');
+  const continueBtn = document.getElementById('infoModalContinue');
+  checkbox.addEventListener('change', () => { continueBtn.disabled = !checkbox.checked; });
+  continueBtn.addEventListener('click', () => {
+    document.getElementById('infoModal').hidden = true;
+    try{ sessionStorage.setItem(POPUP_SESSION_KEY, '1'); }catch(e){ /* ignorer */ }
+  });
+}
+
+/* ================================================================
    EVENT WIRING
    ================================================================ */
 function initEvents(){
@@ -768,6 +981,12 @@ function initEvents(){
   });
   document.getElementById('inputTournamentInfo').addEventListener('input', e => {
     state.meta.info = e.target.value; saveState(); renderInfoTab();
+  });
+  document.getElementById('inputPopupText').addEventListener('input', e => {
+    state.meta.popupText = e.target.value; saveState();
+  });
+  document.getElementById('inputPopupEnabled').addEventListener('change', e => {
+    state.meta.popupEnabled = e.target.checked; saveState();
   });
   document.getElementById('inputPrimaryColor').addEventListener('input', e => {
     state.meta.primaryColor = e.target.value; saveState(); applyThemeColors();
@@ -858,6 +1077,34 @@ function initEvents(){
     }
   });
 
+  document.getElementById('betForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const bettorInput = document.getElementById('inputBetBettor');
+    const targetSel = document.getElementById('inputBetTarget');
+    const amountInput = document.getElementById('inputBetAmount');
+    const scopeSel = document.getElementById('inputBetScope');
+    addBet(bettorInput.value, targetSel.value, amountInput.value, scopeSel.value);
+    bettorInput.value = '';
+    amountInput.value = '';
+  });
+  document.getElementById('betList').addEventListener('change', e => {
+    if(e.target.dataset.role === 'bet-bettor'){
+      setBetBettor(e.target.closest('li').dataset.id, e.target.value);
+    }else if(e.target.dataset.role === 'bet-amount'){
+      setBetAmount(e.target.closest('li').dataset.id, e.target.value);
+    }
+  });
+  document.getElementById('betList').addEventListener('click', e => {
+    if(e.target.dataset.action === 'delete-bet'){
+      deleteBet(e.target.closest('li').dataset.id);
+    }
+  });
+  document.getElementById('oddsList').addEventListener('change', e => {
+    if(e.target.dataset.role === 'player-odds'){
+      setPlayerOdds(e.target.closest('.odds-row').dataset.id, e.target.value);
+    }
+  });
+
   document.getElementById('exportBtn').addEventListener('click', exportJSON);
   document.getElementById('importInput').addEventListener('change', e => {
     if(e.target.files[0]) importJSON(e.target.files[0]);
@@ -876,6 +1123,8 @@ function initEvents(){
   initTabs();
   initThemeToggle();
   initAdminLock();
+  initInfoModal();
   initEvents();
   renderAll();
+  maybeShowInfoModal();
 })();

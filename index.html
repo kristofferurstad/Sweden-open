@@ -126,6 +126,7 @@
           <button class="subtab" data-subtab="spillere" role="tab" aria-selected="false">Spillere</button>
           <button class="subtab" data-subtab="baner" role="tab" aria-selected="false">Baner</button>
           <button class="subtab" data-subtab="runder" role="tab" aria-selected="false">Runder &amp; score</button>
+          <button class="subtab" data-subtab="betting" role="tab" aria-selected="false">Betting</button>
           <button class="subtab" data-subtab="data" role="tab" aria-selected="false">Data</button>
         </nav>
 
@@ -144,10 +145,22 @@
         <!-- Informasjon til deltakerne -->
         <div id="sub-melding" class="subtab-panel">
           <div class="form-row" style="max-width:640px;">
-            <label for="inputTournamentInfo">Informasjon til deltakerne</label>
-            <textarea id="inputTournamentInfo" rows="8" placeholder="Skriv informasjon som alle deltakerne skal se, f.eks. praktisk info, regler eller beskjeder..."></textarea>
+            <label for="inputTournamentInfo">Informasjon til deltakerne (fanen «Informasjon»)</label>
+            <textarea id="inputTournamentInfo" rows="6" placeholder="Skriv informasjon som alle deltakerne skal se, f.eks. praktisk info, regler eller beskjeder..."></textarea>
           </div>
           <p class="section-note">Denne teksten vises til alle i fanen «Informasjon».</p>
+
+          <div class="admin-divider"></div>
+
+          <div class="form-row" style="max-width:640px;">
+            <label for="inputPopupText">Popup-boks som må godkjennes ved besøk</label>
+            <textarea id="inputPopupText" rows="6" placeholder="F.eks. viktige beskjeder, regler eller annet alle må bekrefte at de har lest..."></textarea>
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="inputPopupEnabled">
+            Vis denne boksen når noen åpner siden (må hukes av før man kommer videre)
+          </label>
+          <p class="section-note">Boksen dukker opp med det samme siden lastes, og må godkjennes én gang per nettleserøkt.</p>
         </div>
 
         <!-- Utseende / farger -->
@@ -197,6 +210,27 @@
           <div id="adminRoundsList" class="admin-rounds-list"></div>
         </div>
 
+        <!-- Betting -->
+        <div id="sub-betting" class="subtab-panel">
+          <h3 class="odds-heading">Odds per spiller</h3>
+          <div id="oddsList" class="odds-list"></div>
+          <p class="section-note">Valgfritt: sett desimalodds per spiller (f.eks. 2.5). Brukes til å vise mulig utbetaling på hver bet.</p>
+
+          <div class="admin-divider"></div>
+
+          <form id="betForm" class="inline-form">
+            <input type="text" id="inputBetBettor" placeholder="Hvem better" required>
+            <select id="inputBetTarget"></select>
+            <input type="number" id="inputBetAmount" step="any" min="0" placeholder="Beløp (kr)" required>
+            <select id="inputBetScope"></select>
+            <button type="submit" class="btn btn-primary">Legg til</button>
+          </form>
+          <p class="empty-hint" id="betPlayerWarning" hidden>Legg til minst én spiller før du kan registrere betting.</p>
+          <div id="betSummary" class="bet-summary"></div>
+          <ul class="bet-list" id="betList"></ul>
+          <p class="empty-hint" id="betEmpty" hidden>Ingen bets registrert ennå.</p>
+        </div>
+
         <!-- Data -->
         <div id="sub-data" class="subtab-panel">
           <div class="data-actions">
@@ -221,6 +255,19 @@
 </div>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- Popup-boks som må godkjennes ved besøk (admin-styrt innhold) -->
+<div id="infoModal" class="info-modal-overlay" hidden>
+  <div class="info-modal-box" role="dialog" aria-modal="true" aria-labelledby="infoModalHeading">
+    <h2 id="infoModalHeading" class="info-modal-heading">Informasjon</h2>
+    <div id="infoModalText" class="info-modal-text"></div>
+    <label class="info-modal-checkbox-row">
+      <input type="checkbox" id="infoModalCheckbox">
+      Jeg har lest og forstått informasjonen over
+    </label>
+    <button id="infoModalContinue" class="btn btn-primary" type="button" disabled>Fortsett til siden</button>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
