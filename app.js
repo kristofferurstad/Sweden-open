@@ -56,6 +56,7 @@ async function loadState(){
   state.players = state.players || [];
   state.courses = state.courses || [];
   state.rounds = state.rounds || [];
+  normalizePlayers(); // HANDICAP: gamle turneringer uten handicap-felt får 0 automatisk
 
   document.documentElement.setAttribute('data-theme', state.meta.theme === 'dark' ? 'dark' : 'light');
 }
@@ -83,6 +84,34 @@ function hasScore(v){
   return v !== null && v !== undefined && v !== '';
 }
 
+/* ---- HANDICAP: hjelpefunksjoner ---- */
+
+// Sikrer at alle spillere har et gyldig numerisk handicap (bakoverkompatibilitet:
+// gamle/importerte turneringer uten feltet får 0).
+function normalizePlayers(){
+  state.players.forEach(p => {
+    const h = Number(p.handicap);
+    p.handicap = Number.isFinite(h) ? h : 0;
+  });
+}
+
+function round2(n){ return Math.round(n * 100) / 100; }
+
+// Diskret badge ved siden av et spillernavn, f.eks. "(+3)" eller "(-1.5)".
+// Skjules helt ved handicap 0 for å holde visningen ren.
+function hcpBadge(h){
+  const n = Number(h) || 0;
+  if(n === 0) return '';
+  const sign = n > 0 ? '+' : '';
+  return ` <span class="hcp-badge">(${sign}${round2(n)})</span>`;
+}
+
+// Full verdi til egen Handicap-kolonne — viser alltid tallet, også 0.
+function hcpValue(h){
+  const n = round2(Number(h) || 0);
+  return (n > 0 ? '+' : '') + n;
+}
+
 function playedRounds(){
   return state.rounds.filter(r => Object.values(r.scores || {}).some(hasScore));
 }
@@ -100,22 +129,29 @@ function toast(msg){
    BEREGNINGER: stilling, rundevinnere, neste runde-kort
    ================================================================ */
 
-// Regner ut sammenlagtstilling basert på et gitt sett runder
+// Regner ut sammenlagtstilling basert på et gitt sett runder.
+// HANDICAP: hver runde gir en nettoscore (brutto − handicap). Rangeringen
+// bruker summen av nettoscore («total» er fortsatt bruttosum, og følger
+// med uendret slik at den fortsatt kan vises i egen kolonne).
 function standingsForRounds(rounds){
   const rows = state.players.map(p => {
+    const handicap = Number(p.handicap) || 0;
     const perRound = rounds.map(r => (hasScore(r.scores[p.id]) ? Number(r.scores[p.id]) : null));
-    const played = perRound.filter(hasScore);
-    const total = played.reduce((a,b) => a + b, 0);
-    return { playerId: p.id, name: p.name, perRound, total, playedCount: played.length };
+    const perRoundNetto = perRound.map(s => hasScore(s) ? round2(s - handicap) : null);
+    const playedBrutto = perRound.filter(hasScore);
+    const playedNetto = perRoundNetto.filter(hasScore);
+    const total = playedBrutto.reduce((a,b) => a + b, 0);
+    const totalNetto = round2(playedNetto.reduce((a,b) => a + b, 0));
+    return { playerId: p.id, name: p.name, handicap, perRound, perRoundNetto, total, totalNetto, playedCount: playedBrutto.length };
   });
 
-  const played = rows.filter(r => r.playedCount > 0).sort((a,b) => a.total - b.total);
+  const played = rows.filter(r => r.playedCount > 0).sort((a,b) => a.totalNetto - b.totalNetto);
   const unplayed = rows.filter(r => r.playedCount === 0);
 
-  // Standard konkurranse-rangering (delt plass ved likt resultat)
+  // Standard konkurranse-rangering (delt plass ved likt nettoresultat)
   let rank = 0;
   played.forEach((r, i) => {
-    if(i === 0 || r.total !== played[i-1].total) rank = i + 1;
+    if(i === 0 || r.totalNetto !== played[i-1].totalNetto) rank = i + 1;
     r.rank = rank;
   });
   unplayed.forEach(r => { r.rank = null; });
@@ -138,9 +174,11 @@ function roundWinners(round){
   return { min, names: entries.filter(e => Number(e.score) === min).map(e => e.name) };
 }
 
+// HANDICAP: rekkefølgen kommer fra currentStandings(), som nå rangerer på
+// nettoscore — kortoppsettet blir dermed automatisk basert på netto.
 function nextRoundGroups(){
   const standing = currentStandings();
-  const order = [...standing.ranked, ...standing.unranked].map(r => r.name);
+  const order = [...standing.ranked, ...standing.unranked].map(r => ({ name: r.name, handicap: r.handicap }));
   const groups = [];
   for(let i = 0; i < order.length; i += 4){
     groups.push(order.slice(i, i + 4));
@@ -225,12 +263,13 @@ function renderLeaderboard(){
   }
   empty.hidden = true;
 
-  let headHtml = `<th>Plass</th><th>Navn</th>`;
+  let headHtml = `<th>Plass</th><th>Navn</th><th class="num">HCP</th>`;
   state.rounds.forEach((r, i) => { headHtml += `<th class="num" title="${escapeHtml(courseName(r.courseId))}">R${i+1}</th>`; });
-  headHtml += `<th class="num">Totalt</th><th class="num">Bak leder</th><th>Trend</th>`;
+  headHtml += `<th class="num">Brutto</th><th class="num">Netto</th><th class="num">Bak leder</th><th>Trend</th>`;
   head.innerHTML = headHtml;
 
-  const leaderTotal = standing.ranked.length ? standing.ranked[0].total : 0;
+  // HANDICAP: ledelse og "bak leder" beregnes nå ut fra nettoscore
+  const leaderNetto = standing.ranked.length ? standing.ranked[0].totalNetto : 0;
 
   // Beste score per runde (for uthevelse)
   const bestPerRound = state.rounds.map(r => roundWinners(r).min);
@@ -256,15 +295,17 @@ function renderLeaderboard(){
       return `<td class="num ${isBest ? 'best-score' : ''}">${hasScore(s) ? s : '–'}</td>`;
     }).join('');
 
-    const behind = row.rank ? (row.rank === 1 ? '–' : `+${row.total - leaderTotal}`) : '–';
+    const behind = row.rank ? (row.rank === 1 ? '–' : `+${round2(row.totalNetto - leaderNetto)}`) : '–';
     const rankDisplay = row.rank ? `<span class="rank-badge ${badgeClass}">${row.rank}</span>` : '<span class="rank-badge">–</span>';
 
     return `
       <tr class="${isLeader ? 'is-leader' : ''}">
         <td>${rankDisplay}</td>
         <td>${escapeHtml(row.name)}</td>
+        <td class="num">${hcpValue(row.handicap)}</td>
         ${roundCells}
         <td class="num">${row.playedCount > 0 ? row.total : '–'}</td>
+        <td class="num">${row.playedCount > 0 ? row.totalNetto : '–'}</td>
         <td class="num">${behind}</td>
         <td>${trendHtml}</td>
       </tr>`;
@@ -290,10 +331,19 @@ function renderRoundsPublic(){
       ? `<p class="round-winner-line">🏆 Rundevinner: ${escapeHtml(winners.names.join(', '))} (${winners.min})</p>`
       : '';
 
+    // HANDICAP: viser brutto, handicap og nettoscore for runden per spiller
     const scoreRows = state.players.map(p => {
       const s = r.scores[p.id];
+      const hcp = Number(p.handicap) || 0;
+      const netto = hasScore(s) ? round2(Number(s) - hcp) : null;
       const isBest = hasScore(s) && winners.min !== null && Number(s) === winners.min;
-      return `<div class="msg-name">${escapeHtml(p.name)}</div><div class="msg-score ${isBest ? 'best-score' : ''}">${hasScore(s) ? s : '–'}</div>`;
+      return `
+        <tr>
+          <td>${escapeHtml(p.name)}</td>
+          <td class="num ${isBest ? 'best-score' : ''}">${hasScore(s) ? s : '–'}</td>
+          <td class="num">${hcpValue(hcp)}</td>
+          <td class="num">${hasScore(netto) ? netto : '–'}</td>
+        </tr>`;
     }).join('');
 
     return `
@@ -304,7 +354,12 @@ function renderRoundsPublic(){
         </div>
         <p class="round-course">${escapeHtml(courseName(r.courseId))}</p>
         ${winnerLine}
-        <div class="mini-score-grid">${scoreRows || '<p class="empty-hint">Ingen spillere.</p>'}</div>
+        <div class="table-scroll">
+          <table class="round-mini-table">
+            <thead><tr><th>Navn</th><th class="num">Brutto</th><th class="num">HCP</th><th class="num">Netto</th></tr></thead>
+            <tbody>${scoreRows || '<tr><td colspan="4" class="empty-hint">Ingen spillere.</td></tr>'}</tbody>
+          </table>
+        </div>
       </div>`;
   }).join('');
 }
@@ -325,11 +380,11 @@ function renderNextRound(){
     : 'Ingen runder er spilt ennå — gruppene følger rekkefølgen spillerne ble lagt til i.';
 
   const groups = nextRoundGroups();
-  groupsEl.innerHTML = groups.map((names, i) => `
+  groupsEl.innerHTML = groups.map((players, i) => `
     <div class="group-card">
       <h3>${groupLabel(i)}</h3>
       <ol>
-        ${names.map((n, idx) => `<li><span class="pos">${i*4 + idx + 1}.</span>${escapeHtml(n)}</li>`).join('')}
+        ${players.map((pl, idx) => `<li><span class="pos">${i*4 + idx + 1}.</span>${escapeHtml(pl.name)}${hcpBadge(pl.handicap)}</li>`).join('')}
       </ol>
     </div>
   `).join('');
@@ -347,6 +402,8 @@ function renderPlayers(){
   list.innerHTML = state.players.map(p => `
     <li data-id="${p.id}">
       <input class="name-edit" data-role="player-name" value="${escapeHtml(p.name)}">
+      <input class="hcp-edit" type="number" step="any" data-role="player-handicap"
+             value="${p.handicap}" title="Handicap" aria-label="Handicap for ${escapeHtml(p.name)}">
       <span class="row-actions">
         <button class="icon-action" data-action="delete-player" title="Slett spiller">✕</button>
       </span>
@@ -386,7 +443,7 @@ function renderAdminRounds(){
     ).join('');
 
     const scoreInputs = state.players.map(p => `
-      <div class="p-name">${escapeHtml(p.name)}</div>
+      <div class="p-name">${escapeHtml(p.name)}${hcpBadge(p.handicap)}</div>
       <input type="number" inputmode="numeric" data-round="${r.id}" data-player="${p.id}"
              value="${hasScore(r.scores[p.id]) ? r.scores[p.id] : ''}" placeholder="–">
     `).join('');
@@ -410,15 +467,24 @@ function renderAdminRounds(){
 /* ================================================================
    ADMIN-HANDLINGER
    ================================================================ */
-function addPlayer(name){
+function addPlayer(name, handicap){
   const trimmed = name.trim();
   if(!trimmed) return;
-  state.players.push({ id: uid(), name: trimmed });
+  const h = Number(handicap);
+  state.players.push({ id: uid(), name: trimmed, handicap: Number.isFinite(h) ? h : 0 });
   saveState(); renderAll();
 }
 function renamePlayer(id, name){
   const p = state.players.find(p => p.id === id);
   if(p && name.trim()){ p.name = name.trim(); saveState(); renderHeader(); renderOverview(); renderLeaderboard(); renderRoundsPublic(); renderNextRound(); renderAdminRounds(); }
+}
+// HANDICAP: kan redigeres når som helst fra spillerlisten i Admin
+function setPlayerHandicap(id, value){
+  const p = state.players.find(p => p.id === id);
+  if(!p) return;
+  const h = Number(value);
+  p.handicap = Number.isFinite(h) ? h : 0;
+  saveState(); renderHeader(); renderOverview(); renderLeaderboard(); renderRoundsPublic(); renderNextRound(); renderAdminRounds();
 }
 function deletePlayer(id){
   if(!confirm('Slette denne spilleren? Registrerte score for spilleren fjernes også.')) return;
@@ -495,6 +561,7 @@ function importJSON(file){
       }
       state = parsed;
       state.meta = Object.assign(defaultState().meta, state.meta || {});
+      normalizePlayers(); // HANDICAP: eldre eksportfiler uten feltet får 0 automatisk
       saveState();
       document.documentElement.setAttribute('data-theme', state.meta.theme === 'dark' ? 'dark' : 'light');
       renderAll();
@@ -560,13 +627,17 @@ function initEvents(){
 
   document.getElementById('playerForm').addEventListener('submit', e => {
     e.preventDefault();
-    const input = document.getElementById('inputPlayerName');
-    addPlayer(input.value);
-    input.value = '';
+    const nameInput = document.getElementById('inputPlayerName');
+    const hcpInput = document.getElementById('inputPlayerHandicap');
+    addPlayer(nameInput.value, hcpInput.value);
+    nameInput.value = '';
+    hcpInput.value = '0';
   });
   document.getElementById('playerList').addEventListener('change', e => {
     if(e.target.dataset.role === 'player-name'){
       renamePlayer(e.target.closest('li').dataset.id, e.target.value);
+    }else if(e.target.dataset.role === 'player-handicap'){
+      setPlayerHandicap(e.target.closest('li').dataset.id, e.target.value);
     }
   });
   document.getElementById('playerList').addEventListener('click', e => {
