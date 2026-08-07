@@ -42,6 +42,7 @@
     <button class="tab" data-tab="leaderboard" role="tab" aria-selected="false">Leaderboard</button>
     <button class="tab" data-tab="runder" role="tab" aria-selected="false">Runder</button>
     <button class="tab" data-tab="neste" role="tab" aria-selected="false">Neste runde</button>
+    <button class="tab" data-tab="informasjon" role="tab" aria-selected="false">Informasjon</button>
     <button class="tab tab-admin" data-tab="admin" role="tab" aria-selected="false">Admin</button>
   </nav>
 
@@ -90,76 +91,108 @@
       <div id="cardGroups" class="card-groups"></div>
     </section>
 
+    <!-- ===== INFORMASJON ===== -->
+    <section id="tab-informasjon" class="tab-panel">
+      <h2 class="panel-title">Informasjon</h2>
+      <div class="chain-divider"></div>
+      <div id="infoContent" class="info-content"></div>
+      <p class="empty-hint" id="infoEmpty" hidden>Ingen informasjon er lagt inn ennå.</p>
+    </section>
+
     <!-- ===== ADMIN ===== -->
     <section id="tab-admin" class="tab-panel">
-      <h2 class="panel-title">Administrasjon</h2>
-      <p class="section-note">Endringer lagres automatisk i denne nettleseren. Husk å eksportere og publisere JSON-filen på nytt når du vil at andre skal se oppdaterte resultater — se README for fremgangsmåte.</p>
 
-      <nav class="subtabbar" role="tablist" aria-label="Admin-seksjoner">
-        <button class="subtab active" data-subtab="info" role="tab" aria-selected="true">Turnering</button>
-        <button class="subtab" data-subtab="spillere" role="tab" aria-selected="false">Spillere</button>
-        <button class="subtab" data-subtab="baner" role="tab" aria-selected="false">Baner</button>
-        <button class="subtab" data-subtab="runder" role="tab" aria-selected="false">Runder &amp; score</button>
-        <button class="subtab" data-subtab="data" role="tab" aria-selected="false">Data</button>
-      </nav>
-
-      <!-- Turneringsinfo -->
-      <div id="sub-info" class="subtab-panel active">
-        <div class="form-row">
-          <label for="inputTournamentName">Turneringens navn</label>
-          <input type="text" id="inputTournamentName" placeholder="F.eks. Sommerturneringen 2026">
-        </div>
-        <div class="form-row">
-          <label for="inputTournamentDate">Dato</label>
-          <input type="date" id="inputTournamentDate">
-        </div>
-      </div>
-
-      <!-- Spillere -->
-      <div id="sub-spillere" class="subtab-panel">
-        <form id="playerForm" class="inline-form">
-          <input type="text" id="inputPlayerName" placeholder="Navn på spiller" required>
-          <input type="number" id="inputPlayerHandicap" step="any" value="0" placeholder="Handicap" title="Handicap (kan være negativt og ha desimaler)">
-          <button type="submit" class="btn btn-primary">Legg til</button>
+      <!-- Kodelås: admin-innholdet vises først når riktig kode er tastet inn -->
+      <div id="adminLock" class="admin-lock">
+        <h2 class="panel-title">Administrasjon</h2>
+        <p class="section-note">Denne siden er kodelåst. Tast inn koden for å få tilgang.</p>
+        <form id="adminLockForm" class="inline-form admin-lock-form">
+          <input type="password" inputmode="numeric" autocomplete="off" id="inputAdminCode" placeholder="Kode" maxlength="12">
+          <button type="submit" class="btn btn-primary">Lås opp</button>
         </form>
-        <p class="section-note">Handicap kan være positivt eller negativt, og kan ha desimaler (f.eks. 2.5 eller -1.0). Nettoscore = bruttoscore − handicap.</p>
-        <ul class="admin-list" id="playerList"></ul>
-        <p class="empty-hint" id="playerEmpty" hidden>Ingen spillere lagt til ennå.</p>
+        <p class="empty-hint" id="adminLockError" hidden>Feil kode. Prøv igjen.</p>
       </div>
 
-      <!-- Baner -->
-      <div id="sub-baner" class="subtab-panel">
-        <form id="courseForm" class="inline-form">
-          <input type="text" id="inputCourseName" placeholder="Navn på bane" required>
-          <button type="submit" class="btn btn-primary">Legg til</button>
-        </form>
-        <ul class="admin-list" id="courseList"></ul>
-        <p class="empty-hint" id="courseEmpty" hidden>Ingen baner lagt til ennå.</p>
-      </div>
+      <div id="adminContent" class="admin-content" hidden>
+        <h2 class="panel-title">Administrasjon</h2>
+        <p class="section-note">Endringer lagres automatisk i denne nettleseren. Husk å eksportere og publisere JSON-filen på nytt når du vil at andre skal se oppdaterte resultater — se README for fremgangsmåte.</p>
 
-      <!-- Runder & score -->
-      <div id="sub-runder" class="subtab-panel">
-        <form id="roundForm" class="inline-form">
-          <select id="inputRoundCourse"></select>
-          <button type="submit" class="btn btn-primary">Legg til runde</button>
-        </form>
-        <p class="empty-hint" id="roundCourseWarning" hidden>Legg til minst én bane før du oppretter runder.</p>
-        <div id="adminRoundsList" class="admin-rounds-list"></div>
-      </div>
+        <nav class="subtabbar" role="tablist" aria-label="Admin-seksjoner">
+          <button class="subtab active" data-subtab="info" role="tab" aria-selected="true">Turnering</button>
+          <button class="subtab" data-subtab="melding" role="tab" aria-selected="false">Informasjon</button>
+          <button class="subtab" data-subtab="spillere" role="tab" aria-selected="false">Spillere</button>
+          <button class="subtab" data-subtab="baner" role="tab" aria-selected="false">Baner</button>
+          <button class="subtab" data-subtab="runder" role="tab" aria-selected="false">Runder &amp; score</button>
+          <button class="subtab" data-subtab="data" role="tab" aria-selected="false">Data</button>
+        </nav>
 
-      <!-- Data -->
-      <div id="sub-data" class="subtab-panel">
-        <div class="data-actions">
-          <button id="exportBtn" class="btn btn-secondary" type="button">Eksporter til JSON</button>
-          <label class="btn btn-secondary file-btn">
-            Importer fra JSON
-            <input type="file" id="importInput" accept="application/json" hidden>
-          </label>
-          <button id="resetBtn" class="btn btn-danger" type="button">Nullstill turnering</button>
+        <!-- Turneringsinfo -->
+        <div id="sub-info" class="subtab-panel active">
+          <div class="form-row">
+            <label for="inputTournamentName">Turneringens navn</label>
+            <input type="text" id="inputTournamentName" placeholder="F.eks. Sommerturneringen 2026">
+          </div>
+          <div class="form-row">
+            <label for="inputTournamentDate">Dato</label>
+            <input type="date" id="inputTournamentDate">
+          </div>
         </div>
-        <p class="section-note">Eksporter etter hver endring og last opp filen som <code>data.json</code> i prosjektet ditt (GitHub/Netlify) for å publisere resultatene til alle deltakerne.</p>
-      </div>
 
+        <!-- Informasjon til deltakerne -->
+        <div id="sub-melding" class="subtab-panel">
+          <div class="form-row" style="max-width:640px;">
+            <label for="inputTournamentInfo">Informasjon til deltakerne</label>
+            <textarea id="inputTournamentInfo" rows="8" placeholder="Skriv informasjon som alle deltakerne skal se, f.eks. praktisk info, regler eller beskjeder..."></textarea>
+          </div>
+          <p class="section-note">Denne teksten vises til alle i fanen «Informasjon».</p>
+        </div>
+
+        <!-- Spillere -->
+        <div id="sub-spillere" class="subtab-panel">
+          <form id="playerForm" class="inline-form">
+            <input type="text" id="inputPlayerName" placeholder="Navn på spiller" required>
+            <input type="number" id="inputPlayerHandicap" step="any" value="0" placeholder="Handicap" title="Handicap (kan være negativt og ha desimaler)">
+            <button type="submit" class="btn btn-primary">Legg til</button>
+          </form>
+          <p class="section-note">Handicap kan være positivt eller negativt, og kan ha desimaler (f.eks. 2.5 eller -1.0). Nettoscore = bruttoscore − handicap.</p>
+          <ul class="admin-list" id="playerList"></ul>
+          <p class="empty-hint" id="playerEmpty" hidden>Ingen spillere lagt til ennå.</p>
+        </div>
+
+        <!-- Baner -->
+        <div id="sub-baner" class="subtab-panel">
+          <form id="courseForm" class="inline-form">
+            <input type="text" id="inputCourseName" placeholder="Navn på bane" required>
+            <button type="submit" class="btn btn-primary">Legg til</button>
+          </form>
+          <ul class="admin-list" id="courseList"></ul>
+          <p class="empty-hint" id="courseEmpty" hidden>Ingen baner lagt til ennå.</p>
+        </div>
+
+        <!-- Runder & score -->
+        <div id="sub-runder" class="subtab-panel">
+          <form id="roundForm" class="inline-form">
+            <select id="inputRoundCourse"></select>
+            <button type="submit" class="btn btn-primary">Legg til runde</button>
+          </form>
+          <p class="empty-hint" id="roundCourseWarning" hidden>Legg til minst én bane før du oppretter runder.</p>
+          <div id="adminRoundsList" class="admin-rounds-list"></div>
+        </div>
+
+        <!-- Data -->
+        <div id="sub-data" class="subtab-panel">
+          <div class="data-actions">
+            <button id="exportBtn" class="btn btn-secondary" type="button">Eksporter til JSON</button>
+            <label class="btn btn-secondary file-btn">
+              Importer fra JSON
+              <input type="file" id="importInput" accept="application/json" hidden>
+            </label>
+            <button id="resetBtn" class="btn btn-danger" type="button">Nullstill turnering</button>
+          </div>
+          <p class="section-note">Eksporter etter hver endring og last opp filen som <code>data.json</code> i prosjektet ditt (GitHub/Netlify) for å publisere resultatene til alle deltakerne.</p>
+        </div>
+
+      </div>
     </section>
 
   </main>

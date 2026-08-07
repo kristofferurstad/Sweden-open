@@ -216,10 +216,15 @@ table.board tr.is-leader td{ font-weight:700; }
 .best-score{ position:relative; color:var(--fairway); font-weight:700; }
 .best-score::after{ content:'★'; margin-left:4px; font-size:.75em; color:var(--disc-orange); }
 
-/* HANDICAP: diskret badge ved siden av spillernavn, f.eks. "(+3)" */
-.hcp-badge{ color:var(--text-soft); font-size:.82em; font-weight:600; font-family:var(--font-mono); }
-
 .empty-hint{ color:var(--text-soft); font-style:italic; padding:18px 4px; }
+
+/* ============================================================
+   INFORMASJON (public fritekst-fane)
+   ============================================================ */
+.info-content{
+  background:var(--panel-bg); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:20px; box-shadow:var(--shadow-sm); line-height:1.7; white-space:pre-line;
+}
 
 /* ============================================================
    ROUNDS (public)
@@ -237,14 +242,9 @@ table.board tr.is-leader td{ font-weight:700; }
 .round-status.progress{ background:var(--steel-soft); color:var(--text-soft); }
 .round-winner-line{ margin:0 0 10px; font-size:.9rem; color:var(--disc-orange); font-weight:700; }
 
-/* HANDICAP: liten tabell per runde med brutto / hcp / netto */
-table.round-mini-table{ width:100%; border-collapse:collapse; font-size:.9rem; }
-table.round-mini-table th, table.round-mini-table td{ padding:6px 8px; text-align:left; border-bottom:1px solid var(--border); }
-table.round-mini-table thead th{
-  font-family:var(--font-display); font-size:.95rem; color:var(--text-soft);
-  text-transform:uppercase; letter-spacing:.02em; font-weight:600;
-}
-table.round-mini-table td.num, table.round-mini-table th.num{ font-family:var(--font-mono); text-align:right; }
+.mini-score-grid{ display:grid; grid-template-columns:1fr auto; row-gap:6px; column-gap:14px; font-size:.92rem; }
+.mini-score-grid .msg-name{ color:var(--text); }
+.mini-score-grid .msg-score{ font-family:var(--font-mono); font-weight:700; text-align:right; }
 
 /* ============================================================
    NEXT ROUND CARD GROUPS
@@ -265,10 +265,11 @@ table.round-mini-table td.num, table.round-mini-table th.num{ font-family:var(--
    ============================================================ */
 .form-row{ margin-bottom:14px; display:flex; flex-direction:column; gap:6px; max-width:360px; }
 .form-row label{ font-size:.82rem; font-weight:700; color:var(--text-soft); }
-input[type="text"], input[type="date"], input[type="number"], select{
+input[type="text"], input[type="date"], input[type="number"], input[type="password"], select, textarea{
   border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px;
-  background:var(--bg); color:var(--text); font-size:.95rem;
+  background:var(--bg); color:var(--text); font-size:.95rem; font-family:inherit;
 }
+textarea{ resize:vertical; min-height:120px; line-height:1.5; }
 input[type="number"]{ font-family:var(--font-mono); width:84px; text-align:right; }
 
 .inline-form{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
@@ -314,6 +315,16 @@ input[type="number"]{ font-family:var(--font-mono); width:84px; text-align:right
 .arc-complete-row{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:.86rem; }
 
 .data-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+
+/* HANDICAP/ADMIN-LÅS: kodelås-skjerm som vises før admin-innholdet */
+.admin-lock{
+  max-width:360px; margin:20px auto 0; text-align:center;
+  background:var(--panel-bg); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:28px 24px; box-shadow:var(--shadow-sm);
+}
+.admin-lock-form{ justify-content:center; }
+.admin-lock-form input{ max-width:140px; text-align:center; letter-spacing:.3em; font-family:var(--font-mono); }
+#adminLockError{ color:var(--danger); font-style:normal; font-weight:600; padding:8px 4px 0; }
 
 .app-footer{ text-align:center; color:var(--text-soft); font-size:.78rem; padding:24px 20px 8px; }
 
