@@ -324,6 +324,8 @@ function groupLabel(i){
 function renderAll(){
   renderHeader();
   renderOverview();
+  renderOverviewOdds();
+  renderOverviewBets();
   renderLeaderboard();
   renderRoundsPublic();
   renderNextRound();
@@ -389,6 +391,55 @@ function renderOverview(){
       </div>
     `).join('');
   }
+}
+
+// ODDS: skrivebeskyttet oddsoversikt på Oversikt — kun spillere med satt odds vises
+function renderOverviewOdds(){
+  const el = document.getElementById('overviewOdds');
+  const emptyEl = document.getElementById('overviewOddsEmpty');
+  const withOdds = state.players.filter(p => state.odds[p.id]);
+  if(withOdds.length === 0){
+    el.innerHTML = '';
+    emptyEl.hidden = false;
+    return;
+  }
+  emptyEl.hidden = true;
+  el.innerHTML = withOdds.map(p => `
+    <div class="odds-row">
+      <span class="odds-player">${avatarHtml(p.id, 22)}${escapeHtml(p.name)}</span>
+      <span class="odds-value">${state.odds[p.id]}</span>
+    </div>
+  `).join('');
+}
+
+// BETTING: skrivebeskyttet oversikt på Oversikt — hvem har bettet, på hvem, og hvor mye
+function renderOverviewBets(){
+  const el = document.getElementById('overviewBets');
+  const emptyEl = document.getElementById('overviewBetsEmpty');
+  if(state.bets.length === 0){
+    el.innerHTML = '';
+    emptyEl.hidden = false;
+    return;
+  }
+  emptyEl.hidden = true;
+  el.innerHTML = state.bets.map(b => {
+    const player = state.players.find(p => p.id === b.targetPlayerId);
+    const status = betStatus(b);
+    const odds = state.odds[b.targetPlayerId];
+    const payout = odds ? round2(b.amount * odds) : null;
+    return `
+      <li>
+        <div class="bet-row-main">
+          <span class="bet-target">${avatarHtml(b.targetPlayerId, 24)}${escapeHtml(player ? player.name : 'Ukjent spiller')}</span>
+          <span class="bet-scope">${escapeHtml(betScopeLabel(b.scope))}</span>
+          <span class="bet-status ${status.cls}">${status.label}</span>
+        </div>
+        <div class="bet-view-sub">
+          <span>${escapeHtml(b.bettor)} satser <strong>${b.amount} kr</strong></span>
+          ${odds ? `<span class="bet-view-payout">Odds ${odds} → ${payout} kr</span>` : ''}
+        </div>
+      </li>`;
+  }).join('');
 }
 
 function renderLeaderboard(){

@@ -465,6 +465,16 @@ input[type="color"]{
   width:70px; text-align:right; font-family:var(--font-mono); border:1px solid var(--border);
   border-radius:6px; padding:5px 8px; background:var(--panel-bg); color:var(--text); font-size:.88rem;
 }
+/* Skrivebeskyttet oddsverdi (brukt på Oversikt, i motsetning til .odds-input i Admin) */
+.odds-value{ font-family:var(--font-mono); font-weight:700; color:var(--fairway); font-size:.92rem; }
+
+/* Skrivebeskyttet bet-visning på Oversikt (i motsetning til redigerbar .bet-row-sub i Admin) */
+.bet-view-sub{
+  font-size:.88rem; color:var(--text-soft); display:flex; justify-content:space-between;
+  flex-wrap:wrap; gap:6px; row-gap:2px;
+}
+.bet-view-sub strong{ color:var(--text); font-family:var(--font-mono); }
+.bet-view-payout{ font-family:var(--font-mono); color:var(--fairway); }
 
 /* ============================================================
    ADMIN: avkrysningsrad og skillelinje (brukt i Informasjon-underfanen)
