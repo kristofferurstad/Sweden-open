@@ -293,7 +293,10 @@ function renderLeaderboard(){
     const rankDisplay = row.rank ? `<span class="rank-badge ${badgeClass}">${row.rank}</span>` : '<span class="rank-badge">–</span>';
 
     const hcp = hcpByPlayer[row.playerId] || 0;
-    const scoreWithHcp = row.playedCount > 0 ? round2(row.total - hcp) : null;
+    // Score med handicap = bruttoscore + handicap (positivt handicap gir bedre
+    // (lavere) nettoscore, negativt handicap gir dårligere (høyere) nettoscore —
+    // f.eks. hcp -25 og brutto 2 gir netto -23, ikke +27).
+    const scoreWithHcp = row.playedCount > 0 ? round2(row.total + hcp) : null;
 
     return `
       <tr class="${isLeader ? 'is-leader' : ''}">
