@@ -8,7 +8,7 @@
     "accentColor": "#e90c0c",
     "popupText": "HEI! Velkommen til turneringsiden.\nØNSKER DU Å BETTE??\nSend melding til Kristoffer på messenger. Odds på hver spiller kan du sjekke ut her på nettsiden. Man kan maks bette 80 kroner. Man kan kun bette på totalscore. Må vippse på forhånd til nummeret til Kristoffer.  ",
     "popupEnabled": true,
-    "lastUpdated": "2026-08-07T22:55:33.336Z"
+    "lastUpdated": "2026-08-08T15:11:17.924Z"
   },
   "players": [
     {
@@ -100,33 +100,33 @@
     },
     {
       "id": "ctscnvgc3ds",
-      "courseId": "nr3powgfsjv",
+      "courseId": "juf3xvdh65y",
       "scores": {
-        "ipg3ovngy85": null,
-        "lmc85zkh8nd": null,
-        "15whn6uhfgi": null,
-        "ugqn7pwhmal": null,
-        "z56hybyi1vw": null,
-        "yb1fwuzi6w0": null,
-        "63po4efimor": null,
-        "81sd6vbizb5": null
+        "ipg3ovngy85": 3,
+        "lmc85zkh8nd": 3,
+        "15whn6uhfgi": -1,
+        "ugqn7pwhmal": 1,
+        "z56hybyi1vw": -1,
+        "yb1fwuzi6w0": -1,
+        "63po4efimor": -1,
+        "81sd6vbizb5": 1
       },
-      "completed": false
+      "completed": true
     },
     {
       "id": "43zrjr8cayd",
-      "courseId": "juf3xvdh65y",
+      "courseId": "nr3powgfsjv",
       "scores": {
-        "ipg3ovngy85": null,
-        "lmc85zkh8nd": null,
-        "15whn6uhfgi": null,
-        "ugqn7pwhmal": null,
-        "z56hybyi1vw": null,
-        "yb1fwuzi6w0": null,
-        "63po4efimor": null,
-        "81sd6vbizb5": null
+        "ipg3ovngy85": 13,
+        "lmc85zkh8nd": 20,
+        "15whn6uhfgi": 24,
+        "ugqn7pwhmal": 28,
+        "z56hybyi1vw": 16,
+        "yb1fwuzi6w0": 15,
+        "63po4efimor": 21,
+        "81sd6vbizb5": 16
       },
-      "completed": false
+      "completed": true
     },
     {
       "id": "bwtliciceqp",
